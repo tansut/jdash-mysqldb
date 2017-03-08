@@ -70,7 +70,7 @@ export default function () {
         it('should get dashlets of dashboard', function () {
             var provider = Helper.provider;
             return provider.getDashboard(Helper.appid, dashboardId).then(result => {
-                result.dashlets["should"].have.property('length').be.eql(2);
+                should.equal(result.dashlets.length, 2);
             })
         });
 

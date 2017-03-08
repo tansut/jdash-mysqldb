@@ -30,16 +30,16 @@ export class MySQLDbProvider implements IDBProvider {
         }
     }
 
-    // private dashletDocumentToModel(e: IDashletDocument): core.DashletModel {
-    //     return <core.DashletModel>{
-    //         configuration: e.configuration,
-    //         dashboardId: e.dashboardId,
-    //         description: e.description,
-    //         id: e._id.toString(),
-    //         moduleId: e.moduleId,
-    //         title: e.title
-    //     }
-    // }
+    private dashletDocumentToModel(e: DashletEntity): core.DashletModel {
+        return <core.DashletModel>{
+            configuration: JSON.parse(e.Configuration),
+            dashboardId: e.DashboardId,
+            description: e.Description,
+            id: e.Id.toString(),
+            moduleId: e.ModuleId,
+            title: e.Title
+        }
+    }
 
     searchDashboards(search: ISearchDashboard, query?: core.Query): Promise<core.QueryResult<core.DashboardModel>> {
         query = query || {
@@ -82,7 +82,7 @@ export class MySQLDbProvider implements IDBProvider {
                     params.push(search.user);
                 else
                     params.push([search.user]);
-            } 
+            }
 
             this.connection.query(q, params, function (error, results, fields) {
                 if (error) {
@@ -108,6 +108,7 @@ export class MySQLDbProvider implements IDBProvider {
 
     getDashboard(appid: string, id: string): Promise<core.GetDashboardResult> {
 
+
         var self = this;
         var promise = new Promise((resolve, reject) => {
             this.connection.query('SELECT * FROM dashboard WHERE AppId = ? and Id = ?', [appid, id], function (error, results, fields) {
@@ -115,7 +116,15 @@ export class MySQLDbProvider implements IDBProvider {
                     reject(error);
                 } else {
                     if (results.length) {
-                        resolve(self.dashDocumentToDashModel(results[0]));
+                        var dashboard = self.dashDocumentToDashModel(results[0]);
+                        return self.searchDashlets({
+                            dashboardId: dashboard.id
+                        }).then((dashlets) => {
+                            resolve({
+                                dashboard: dashboard,
+                                dashlets: dashlets
+                            });
+                        })
                     }
                     else resolve(null);
                 }
@@ -143,7 +152,7 @@ export class MySQLDbProvider implements IDBProvider {
             this.connection.query('INSERT INTO dashboard SET ?', newEntity, function (error, results, fields) {
                 if (error) {
                     reject(error);
-                } else { 
+                } else {
                     var createResult: core.CreateResult = {
                         id: results.insertId.toString()
                     };
@@ -218,28 +227,127 @@ export class MySQLDbProvider implements IDBProvider {
     }
 
     createDashlet(model: core.DashletCreateModel): Promise<core.CreateResult> {
-        // var newEntity: DashletEntity = {
-        //     dashboardId: model.dashboardId,
-        //     configuration: model.configuration || {},
-        //     moduleId: model.moduleId,
-        //     title: model.title,
-        //     description: model.description,
-        //     createdAt: helper.utcNow()
-        // }
+        var newEntity: DashletEntity = {
+            DashboardId: model.dashboardId,
+            Configuration: JSON.stringify(model.configuration || {}),
+            ModuleId: model.moduleId,
+            Title: model.title,
+            Description: model.description,
+            CreatedAt: helper.utcNow()
+        }
 
-        return null;
 
+        var self = this;
+        var promise = new Promise((resolve, reject) => {
+            this.connection.query('INSERT INTO dashlet SET ?', newEntity, function (error, results, fields) {
+                if (error) {
+                    reject(error);
+                } else {
+                    var createResult: core.CreateResult = {
+                        id: results.insertId.toString()
+                    };
+                    resolve(createResult);
+                }
+            });
+        });
+
+        return promise;
+
+    }
+
+
+    deleteDashlet(id: string | Array<string>): Promise<any> {
+
+        var self = this;
+        var promise = new Promise((resolve, reject) => {
+            this.connection.query('DELETE FROM dashlet WHERE Id = ?', [id], function (error, results, fields) {
+                if (error) {
+                    reject(error);
+                } else {
+                    resolve(results.affectedRows);
+                }
+            })
+        });
+
+        return promise;
+    }
+
+    updateDashlet(id: string, updateValues: core.DashletUpdateModel): Promise<any> {
+
+        var self = this;
+        var promise = new Promise((resolve, reject) => {
+
+            var updateColumns = [];
+            if (updateValues.configuration) {
+                updateColumns.push({ Col: "Configuration", Val: JSON.stringify(updateValues.configuration) });
+            }
+            if (updateValues.description) {
+                updateColumns.push({ Col: "Description", Val: updateValues.description });
+            }
+
+            if (updateValues.title) {
+                updateColumns.push({ Col: "Title", Val: updateValues.title });
+            }
+
+            var updateItems = '';
+            for (var i = 0; i < updateColumns.length; i++) {
+                updateItems += updateColumns[i].Col + " = " + mysql.escape(updateColumns[i].Val) + ", ";
+            }
+
+            updateItems = updateItems.substr(0, updateItems.length - 2);
+
+            this.connection.query('UPDATE dashlet SET ' + updateItems + " WHERE  Id = ?", [id], function (error, results, fields) {
+                if (error) {
+                    reject(error);
+                } else {
+                    resolve(results.affectedRows);
+                }
+            })
+        });
+
+
+        return promise;
     }
 
     searchDashlets(search: ISearchDashlet): Promise<Array<core.DashletModel>> {
-        return null;
-    }
 
-    deleteDashlet(id: string | Array<string>): Promise<any> {
-        return null;
-    }
-    updateDashlet(id: string, updateValues: core.DashletUpdateModel): Promise<any> {
-        return null;
+
+        var filters = [];
+
+        if (search.user instanceof Array) {
+            filters.push({ Clause: " User IN (?) ", Value: search.user });
+        }
+        else if (search.user) {
+            filters.push({ Clause: " User = ? ", Value: search.user });
+        }
+
+        if (search.dashboardId) {
+            filters.push({ Clause: " DashboardId = ?", Value: search.dashboardId });
+        }
+
+
+        var query = "SELECT * FROM dashlet WHERE ";
+        var params = [];
+        for (var i in filters) {
+            query += filters[i].Clause;
+            params.push(filters[i].Value);
+        }
+
+        query += " order by CreatedAt desc ";
+
+        var self = this;
+        var promise = new Promise((resolve, reject) => {
+            this.connection.query(query, params, function (error, dashletEntities, fields) {
+                if (error) {
+                    reject(error);
+                } else {
+                    var models = dashletEntities.map(self.dashletDocumentToModel);
+                    resolve(models);
+                }
+            });
+        });
+
+        return promise;
     }
 
 }

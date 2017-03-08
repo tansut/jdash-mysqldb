@@ -9,7 +9,7 @@ var should = require('should');
 export default function () {
     var dashboardCount = 0;
     var maximumLimit = 100;
-    describe.only('dashboard', function () {
+    describe('dashboard', function () {
         it('should create a dashboard', function () {
             var provider = Helper.provider;
             var model: DashboardModel = {
