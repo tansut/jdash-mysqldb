@@ -20,5 +20,5 @@ export declare class MySQLDbProvider implements IDBProvider {
     updateDashlet(id: string, updateValues: core.DashletUpdateModel): Promise<any>;
     searchDashlets(search: ISearchDashlet): Promise<Array<core.DashletModel>>;
 }
-declare var _default: (options: IProviderOptions) => MySQLDbProvider;
+declare const _default: (options: IProviderOptions) => MySQLDbProvider;
 export default _default;
