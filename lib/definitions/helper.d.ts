@@ -1,4 +1,4 @@
-declare const _default: {
+declare var _default: {
     utcNow: () => Date;
 };
 export default _default;
