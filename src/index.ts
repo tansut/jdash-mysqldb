@@ -47,7 +47,7 @@ export class MySQLDbProvider implements IDBProvider {
             startFrom: 0
         }
         query.limit = Math.min(query.limit, 100);
-        query.startFrom = parseInt(query.startFrom);
+        query.startFrom = parseInt(query.startFrom || 0);
         search = search || {};
 
         var filters = [];
@@ -158,8 +158,7 @@ export class MySQLDbProvider implements IDBProvider {
                 }
             });
         });
-
-
+        
         return promise;
     }
 

@@ -1,12 +1,13 @@
-CREATE TABLE `jdash_local`.`dashboard` (
-  `Id` BIGINT(20) NOT NULL AUTO_INCREMENT,
-  `AppId` NVARCHAR(45) NOT NULL,
-  `Title` NVARCHAR(200) NULL,
-  `ShareWith` NVARCHAR(200) NULL,
-  `Description` NVARCHAR(500) NULL,
-  `User` NVARCHAR(200) NOT NULL,
-  `CreatedAt` DATETIME NOT NULL,
-  `Config` NVARCHAR(2000) NULL,
-  `Layout` NVARCHAR(2000) NULL,
+  CREATE TABLE `dashboard` (
+  `Id` int(20) NOT NULL AUTO_INCREMENT,
+  `AppId` varchar(45) NOT NULL,
+  `Title` nvarchar(200) DEFAULT NULL,
+  `ShareWith` nvarchar(200) DEFAULT NULL,
+  `Description` nvarchar(500) DEFAULT NULL,
+  `User` nvarchar(200) NOT NULL,
+  `CreatedAt` datetime NOT NULL,
+  `Config` nvarchar(2000) DEFAULT NULL,
+  `Layout` mediumtext CHARACTER SET big5,
   PRIMARY KEY (`Id`),
-  UNIQUE INDEX `Id_UNIQUE` (`Id` ASC));
+  UNIQUE KEY `Id_UNIQUE` (`Id`)
+)
