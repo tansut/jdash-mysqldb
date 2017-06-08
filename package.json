@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "JDash MySQL provider",
   "main": "./lib/index.js",
-  "types": "./lib/index.d.ts",
+  "types": "./lib/definitions/index.d.ts",
   "scripts": {
     "test": "mocha -u tdd --timeout 999999 --colors lib/tests"
   },
@@ -17,13 +17,15 @@
     "gulp-typescript": "^3.1.3",
     "mocha": "^3.2.0",
     "should": "^11.2.0",
-    "typescript": "^2.1.6"
+    "typescript": "^2.1.6",
+    "del": "^2.2.2",
+    "gulp-uglify": "^2.0.1"
   },
   "dependencies": {
     "jdash-api-core": "git+ssh://git@bitbucket.org:kalitte/jdash-api-core.git",
     "jdash-core": "git+ssh://git@bitbucket.org:kalitte/jdash-core.git",
     "mysql": "^2.13.0"
   },
-  "author": "",
+  "author": "Aibrite Inc.",
   "license": "ISC"
 }
