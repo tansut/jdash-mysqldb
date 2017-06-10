@@ -19,6 +19,10 @@ export class MySQLDbProvider implements IDBProvider {
         this.connection = options.connection;
     }
 
+    private static tablesCreated = false;
+    private static dashboardCreateScript = "CREATE TABLE `dashboard` (  `Id` int(20) NOT NULL AUTO_INCREMENT,  `AppId` varchar(45) NOT NULL,  `Title` nvarchar(200) DEFAULT NULL,  `ShareWith` nvarchar(200) DEFAULT NULL,  `Description` nvarchar(500) DEFAULT NULL,  `User` nvarchar(200) NOT NULL,  `CreatedAt` datetime NOT NULL,  `Config` nvarchar(2000) DEFAULT NULL,  `Layout` mediumtext CHARACTER SET big5,  PRIMARY KEY (`Id`),  UNIQUE KEY `Id_UNIQUE` (`Id`))";
+    private static dashletCreateScript = "CREATE TABLE `dashlet` (  `Id` int(20) NOT NULL AUTO_INCREMENT,   `ModuleId` varchar(100) NOT NULL,  `DashboardId` bigint(20) NOT NULL,  `Configuration` nvarchar(2000) DEFAULT NULL,  `Title` nvarchar(200) DEFAULT NULL,  `Description` nvarchar(2000) DEFAULT NULL,  `CreatedAt` datetime NOT NULL,  PRIMARY KEY (`Id`))";
+
     private dashDocumentToDashModel(e: DashboardEntity): core.DashboardModel {
         return <core.DashboardModel>{
             config: JSON.parse(e.Config),
@@ -39,6 +43,50 @@ export class MySQLDbProvider implements IDBProvider {
             moduleId: e.ModuleId,
             title: e.Title
         }
+    }
+
+    public ensureTablesCreated() {
+        if (!MySQLDbProvider.tablesCreated) {
+            var query = "SELECT count(*) FROM INFORMATION_SCHEMA.TABLES where (TABLE_NAME = 'dashboard' or TABLE_NAME = 'dashlet' ) and TABLE_SCHEMA = ?";
+
+            return new Promise((resolve, reject) => {
+                this.connection.query(query, [this.connection.config.database], (error, result, fields) => {
+                    if (error) {
+                        reject(error);
+                    } else {
+                        var tableCount = parseInt(result.toString());
+                        var oneCompleted = false;
+                        var dashboardCreation = this.connection.query(MySQLDbProvider.dashboardCreateScript, [], function (tableCreateError, tableCreateResult) {
+                            if (!oneCompleted) {
+                                oneCompleted = true;
+                            } else {
+                                if (error)
+                                    reject(error);
+                                else
+                                    resolve(tableCreateResult);
+                            }
+                        });
+
+                        var dashletCreation = this.connection.query(MySQLDbProvider.dashletCreateScript, [], function (tableCreateError, tableCreateResult) {
+                            if (!oneCompleted) {
+                                oneCompleted = true;
+                            } else {
+                                if (error)
+                                    reject(error);
+                                else
+                                    resolve(tableCreateResult);
+                            }
+                        });
+                    }
+                });
+
+            }).then(() => {
+                MySQLDbProvider.tablesCreated = true;
+            });
+        } else {
+            return Promise.resolve();
+        }
+
     }
 
     searchDashboards(search: ISearchDashboard, query?: core.Query): Promise<core.QueryResult<core.DashboardModel>> {
@@ -158,7 +206,7 @@ export class MySQLDbProvider implements IDBProvider {
                 }
             });
         });
-        
+
         return promise;
     }
 
@@ -354,4 +402,8 @@ export class MySQLDbProvider implements IDBProvider {
 }
 
 
-export default (options: IProviderOptions) => new MySQLDbProvider(options);
+export default (options: IProviderOptions) => {
+    var provider = new MySQLDbProvider(options);
+    provider.ensureTablesCreated();
+    return provider;
+};
